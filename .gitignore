@@ -1,8 +1,69 @@
+# 依赖目录
 node_modules/
+
+# 构建输出
 dist/
+build/
+unpackage/
+.output/
+
+# 系统文件
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# 日志文件
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 环境变量
 .env
 .env.local
+.env.*.local
+
+# IDE 和编辑器
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
 .hbuilderx/
-unpackage/
+.project
+.settings/
+
+# 测试覆盖率
+coverage/
+.nyc_output/
+
+# 临时文件
+*.tmp
+*.temp
+.cache/
+
+# 操作系统文件
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# 锁文件
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# 微信小程序相关
+miniprogram_npm/
+
+# 备份文件
+*.bak
+*.backup
+
+# 压缩文件
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+
