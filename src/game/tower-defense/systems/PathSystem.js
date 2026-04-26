@@ -15,6 +15,9 @@ export class PathSystem {
     const { cols, rows, gridSize } = this.game.config
     const canvasHeight = this.game.canvasAdapter.logicHeight
 
+    console.log('=== PathSystem 生成路径 ===')
+    console.log('cols:', cols, 'rows:', rows, 'gridSize:', gridSize)
+
     this.path = []
     this.pathGrid = []
 
@@ -22,6 +25,7 @@ export class PathSystem {
     for (let i = 0; i < rows; i++) {
       this.pathGrid.push(new Array(cols).fill(false))
     }
+    console.log('pathGrid 大小:', this.pathGrid.length, 'x', this.pathGrid[0]?.length)
 
     let currentRow = 0
     let currentCol = 0
@@ -64,15 +68,38 @@ export class PathSystem {
       x: this.path[this.path.length - 1].x,
       y: canvasHeight + 20
     })
+
+    // 打印路径网格（用于调试）
+    console.log('路径网格:')
+    for (let row = 0; row < this.pathGrid.length; row++) {
+      const rowStr = this.pathGrid[row].map(v => v ? '█' : '·').join('')
+      console.log(`Row ${row}: ${rowStr}`)
+    }
+    console.log('=== PathSystem 生成完成 ===')
   }
 
   /**
    * 检查某个网格是否在路径上
    */
   isOnPath(gridX, gridY) {
+    // 调试日志
+    console.log(`isOnPath(${gridX}, ${gridY}):`, {
+      pathGridLength: this.pathGrid.length,
+      rowExists: !!this.pathGrid[gridY],
+      value: this.pathGrid[gridY] ? this.pathGrid[gridY][gridX] : 'row不存在'
+    })
+
     if (gridY < 0 || gridY >= this.pathGrid.length) return false
     if (gridX < 0 || gridX >= this.game.config.cols) return false
     return this.pathGrid[gridY] && this.pathGrid[gridY][gridX]
+  }
+
+  /**
+   * 设置路径（存档恢复用）
+   */
+  setPath(pathData, pathGridData) {
+    this.path = pathData
+    this.pathGrid = pathGridData
   }
 
   /**

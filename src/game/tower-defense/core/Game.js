@@ -1,5 +1,5 @@
 /**
- * 游戏主控制器
+ * 工具主控制器
  */
 import { GameLoop } from './GameLoop.js'
 import { EventBus } from './EventBus.js'
@@ -11,8 +11,9 @@ import { Tower } from '../entities/Tower.js'
 import { Enemy } from '../entities/Enemy.js'
 import { Projectile } from '../entities/Projectile.js'
 import { Particle } from '../entities/Particle.js'
+import { SaveSystem } from '../systems/SaveSystem.js'
 import { TOWER_CONFIGS } from '../config/towers.js'
-import { getWaveEnemies, ENEMY_CONFIGS } from '../config/enemies.js'
+import { getWaveEnemies, ENEMY_CONFIGS, getEnemyStats } from '../config/enemies.js'
 import { shuffleArray } from '@/utils/math.js'
 
 export class Game {
@@ -24,7 +25,7 @@ export class Game {
     // 事件总线
     this.events = new EventBus()
 
-    // 游戏状态
+    // 工具状态
     this.state = {
       lives: 20,
       gold: 100,
@@ -53,6 +54,9 @@ export class Game {
       ...config
     }
 
+    // 关卡配置
+    this.levelConfig = config.levelConfig || null
+
     // 选择的塔类型
     this.selectedTower = null
 
@@ -61,19 +65,31 @@ export class Game {
     this.comboSystem = new ComboSystem(this)
     this.difficultySystem = new DifficultySystem(this)
     this.achievementSystem = new AchievementSystem(this)
+    this.saveSystem = new SaveSystem(this)
 
-    // 游戏循环
+    // 工具循环
     this.gameLoop = new GameLoop(this)
   }
 
   /**
-   * 初始化游戏
+   * 初始化工具
    */
   init() {
     // 根据画布尺寸计算网格
     this.config.cols = 8
     this.config.gridSize = Math.floor(this.canvasAdapter.logicWidth / this.config.cols)
     this.config.rows = Math.floor(this.canvasAdapter.logicHeight / this.config.gridSize)
+
+    // 调试日志
+    console.log('=== Game 初始化 ===')
+    console.log('canvasAdapter.logicWidth:', this.canvasAdapter.logicWidth)
+    console.log('canvasAdapter.logicHeight:', this.canvasAdapter.logicHeight)
+    console.log('cols:', this.config.cols)
+    console.log('rows:', this.config.rows)
+    console.log('gridSize:', this.config.gridSize)
+    console.log('网格总宽度:', this.config.cols * this.config.gridSize)
+    console.log('网格总高度:', this.config.rows * this.config.gridSize)
+    console.log('===================')
 
     // 生成路径
     this.pathSystem.generate()
@@ -83,7 +99,7 @@ export class Game {
   }
 
   /**
-   * 开始游戏
+   * 开始工具
    */
   start() {
     this.reset()
@@ -93,12 +109,13 @@ export class Game {
   }
 
   /**
-   * 重置游戏状态
+   * 重置工具状态
    */
   reset() {
+    const lc = this.levelConfig
     this.state = {
-      lives: 20,
-      gold: 100,
+      lives: lc ? lc.startingLives : 20,
+      gold: lc ? lc.startingGold : 100,
       wave: 1,
       gameSpeed: 1,
       score: 0,
@@ -119,6 +136,11 @@ export class Game {
     this.comboSystem.resetCombo()
     this.difficultySystem.reset()
     this.achievementSystem.reset()
+
+    // 应用关卡数学题范围约束
+    if (lc && lc.mathDiffRange) {
+      this.difficultySystem.setMathDiffRange(lc.mathDiffRange)
+    }
 
     this.events.emit('stateChange', this.state)
   }
@@ -219,6 +241,9 @@ export class Game {
 
     // 绘制连击显示
     this.comboSystem.render(ctx)
+
+    // 提交绘制（小程序旧 API 需要）
+    this.canvasAdapter.commit()
   }
 
   /**
@@ -231,13 +256,18 @@ export class Game {
     const gridX = Math.floor(x / gridSize)
     const gridY = Math.floor(y / gridSize)
 
+    // 调试日志
+    console.log('点击坐标:', x, y, '-> 网格:', gridX, gridY)
+    console.log('是否在路径上:', this.pathSystem.isOnPath(gridX, gridY))
+
     // 边界检查
     if (gridY < 0 || gridY >= this.config.rows ||
         gridX < 0 || gridX >= this.config.cols) {
+      console.log('点击超出边界')
       return
     }
 
-    // 检查是否在路径上
+    // 检查是否在路径上 - 路径上不能建塔
     if (this.pathSystem.isOnPath(gridX, gridY)) {
       this.events.emit('showToast', { title: '不能在路径上建塔', icon: 'none' })
       return
@@ -247,7 +277,12 @@ export class Game {
     const existingTower = this.towers.find(t => t.gridX === gridX && t.gridY === gridY)
 
     if (existingTower) {
-      this.tryUpgradeTower(existingTower)
+      // 显示塔操作菜单
+      this.events.emit('showTowerMenu', {
+        tower: existingTower,
+        upgradeCost: existingTower.getUpgradeCost(),
+        sellPrice: this.getSellPrice(existingTower)
+      })
     } else if (this.selectedTower) {
       this.tryBuildTower(gridX, gridY)
     } else {
@@ -325,6 +360,7 @@ export class Game {
 
     // 建造特效
     this.createBuildEffect(tower.x, tower.y)
+    this.events.emit('towerBuilt', { tower })
 
     // 清除选择
     this.selectedTower = null
@@ -383,7 +419,39 @@ export class Game {
 
     // 升级特效
     this.createBuildEffect(tower.x, tower.y)
+    this.events.emit('towerUpgraded', { tower })
     this.events.emit('stateChange', this.state)
+  }
+
+  /**
+   * 获取塔的售价
+   */
+  getSellPrice(tower) {
+    // 返回总投资的50%（基础成本 * 等级 * 0.5）
+    return Math.floor(tower.baseConfig.cost * 0.5 * tower.level)
+  }
+
+  /**
+   * 出售塔
+   */
+  sellTower(tower) {
+    const sellPrice = this.getSellPrice(tower)
+
+    // 添加金币
+    this.state.gold += sellPrice
+
+    // 创建死亡特效
+    this.createDeathEffect(tower.x, tower.y, '#888')
+
+    // 从数组中移除塔
+    const index = this.towers.indexOf(tower)
+    if (index > -1) {
+      this.towers.splice(index, 1)
+    }
+
+    // 通知状态变化
+    this.events.emit('stateChange', this.state)
+    this.events.emit('showToast', { title: `拆除成功！+${sellPrice}💰`, icon: 'success' })
   }
 
   /**
@@ -400,15 +468,41 @@ export class Game {
   }
 
   /**
+   * 增加金币
+   */
+  addGold(amount) {
+    this.state.gold += amount
+    this.events.emit('stateChange', this.state)
+  }
+
+  /**
    * 开始波次
    */
   startWave() {
     this.state.waveInProgress = true
     this.achievementSystem.updateStat('wave', this.state.wave)
+    this.events.emit('waveStart', { wave: this.state.wave })
 
     const enemies = getWaveEnemies(this.state.wave)
     const shuffled = shuffleArray(enemies)
     this.spawnEnemies(shuffled, 800)
+  }
+
+  /**
+   * 开始游戏（带延迟）
+   */
+  startWithDelay() {
+    this.reset()
+    this.pathSystem.generate()
+
+    // 第一波敌人延迟5秒出现
+    setTimeout(() => {
+      if (!this.state.isGameOver) {
+        this.startWave()
+      }
+    }, 5000)
+
+    this.gameLoop.start()
   }
 
   /**
@@ -437,7 +531,11 @@ export class Game {
    * 生成单个敌人
    */
   spawnEnemy(type) {
-    const enemy = new Enemy(this, type, this.pathSystem.getPath(), this.state.wave)
+    const levelMul = this.levelConfig ? {
+      healthMul: this.levelConfig.enemyHealthMul,
+      speedMul: this.levelConfig.enemySpeedMul
+    } : {}
+    const enemy = new Enemy(this, type, this.pathSystem.getPath(), this.state.wave, levelMul)
     this.enemies.push(enemy)
   }
 
@@ -446,19 +544,32 @@ export class Game {
    */
   checkWaveComplete() {
     if (this.enemies.length === 0 && !this.state.waveInProgress && !this.state.isGameOver) {
+      // 自动存档
+      this.saveSystem.autoSave()
+
+      // 检查关卡胜利
+      if (this.levelConfig && this.state.wave >= this.levelConfig.totalWaves) {
+        this.gameOver(true)
+        return
+      }
+
       this.state.wave++
       this.state.gold += 30 + this.state.wave * 10
       this.state.waveInProgress = true
 
       // 检查是否满血通过
-      if (this.state.lives === 20) {
+      const startingLives = this.levelConfig ? this.levelConfig.startingLives : 20
+      if (this.state.lives === startingLives) {
         this.achievementSystem.updateStat('perfectWaves', v => v + 1)
       }
 
       setTimeout(() => {
         if (!this.state.isGameOver) {
           this.events.emit('showToast', { title: `第 ${this.state.wave} 波来袭！`, icon: 'none' })
-          this.startWave()
+          // 下一波立即开始（只在第一波有5秒延迟）
+          const enemies = getWaveEnemies(this.state.wave)
+          const shuffled = shuffleArray(enemies)
+          this.spawnEnemies(shuffled, 800)
         }
       }, 2000)
     }
@@ -544,6 +655,88 @@ export class Game {
   }
 
   /**
+   * 创建金色粒子特效（矿场产金）
+   */
+  createGoldEffect(x, y) {
+    for (let i = 0; i < 8; i++) {
+      const angle = Math.random() * Math.PI * 2
+      this.particles.push(new Particle(this, {
+        x, y,
+        vx: Math.cos(angle) * 1.5,
+        vy: -1 - Math.random() * 2,
+        life: 25,
+        color: '#FFD700',
+        size: 4
+      }))
+    }
+  }
+
+  /**
+   * 保存游戏到指定槽位
+   */
+  saveGame(slot) {
+    this.saveSystem.saveToSlot(slot)
+  }
+
+  /**
+   * 从存档恢复游戏
+   */
+  loadGame(saveData) {
+    // 恢复路径
+    this.pathSystem.setPath(saveData.path, saveData.pathGrid)
+
+    // 恢复状态
+    this.state = {
+      ...this.state,
+      lives: saveData.state.lives,
+      gold: saveData.state.gold,
+      wave: saveData.state.wave,
+      score: saveData.state.score,
+      questionsAnswered: saveData.state.questionsAnswered,
+      questionsCorrect: saveData.state.questionsCorrect,
+      enemiesKilled: saveData.state.enemiesKilled,
+      waveInProgress: false
+    }
+
+    // 恢复防御塔
+    this.towers = []
+    for (const td of saveData.towers) {
+      const tower = new Tower(this, td.gridX, td.gridY, td.type)
+      // 升级到保存的等级
+      while (tower.level < td.level) {
+        tower.upgrade()
+      }
+      tower.health = td.health
+      this.towers.push(tower)
+    }
+
+    // 恢复难度
+    if (saveData.difficulty) {
+      this.difficultySystem.currentDifficulty = saveData.difficulty.current
+      this.difficultySystem.history = saveData.difficulty.history || []
+    }
+
+    // 恢复连击
+    if (saveData.combo) {
+      this.comboSystem.combo = saveData.combo.combo
+      this.comboSystem.maxCombo = saveData.combo.maxCombo
+    }
+
+    this.enemies = []
+    this.projectiles = []
+    this.particles = []
+
+    this.events.emit('stateChange', this.state)
+
+    // 开始当前波次（立即开始，无延迟）
+    setTimeout(() => {
+      if (!this.state.isGameOver) {
+        this.startWave()
+      }
+    }, 100)
+  }
+
+  /**
    * 暂停
    */
   pause() {
@@ -571,7 +764,7 @@ export class Game {
   }
 
   /**
-   * 游戏结束
+   * 工具结束
    */
   gameOver(win = false) {
     this.state.isGameOver = true
@@ -586,6 +779,7 @@ export class Game {
 
     const result = {
       win,
+      levelId: this.levelConfig ? this.levelConfig.id : null,
       wave: this.state.wave,
       enemiesKilled: this.state.enemiesKilled,
       questionsCorrect: this.state.questionsCorrect,
@@ -604,7 +798,7 @@ export class Game {
   }
 
   /**
-   * 销毁游戏
+   * 销毁工具
    */
   destroy() {
     this.gameLoop.stop()

@@ -1,7 +1,7 @@
 {
   "name": "math-games-collection",
   "version": "1.0.0",
-  "description": "数学游戏集合 - 支持多端发布",
+  "description": "数学工具集合 - 支持多端发布",
   "scripts": {
     "dev": "uni",
     "dev:h5": "uni --platform h5",
@@ -20,6 +20,7 @@
     "@dcloudio/uni-cli-shared": "3.0.0-4010520240507001",
     "@dcloudio/vite-plugin-uni": "3.0.0-4010520240507001",
     "@vitejs/plugin-vue": "^5.0.4",
-    "vite": "^5.2.8"
+    "vite": "^5.2.8",
+    "vite-plugin-static-copy": "^3.2.0"
   }
 }

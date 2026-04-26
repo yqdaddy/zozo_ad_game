@@ -1,3 +1,5 @@
+import { storageManager } from '@/utils/storage-manager'
+
 /**
  * 成就与星级系统
  */
@@ -177,20 +179,11 @@ export class AchievementSystem {
    * 本地存储操作
    */
   loadUnlocked() {
-    try {
-      const data = uni.getStorageSync('td_achievements') || '[]'
-      return JSON.parse(data)
-    } catch (e) {
-      return []
-    }
+    return storageManager.loadData('achievements', [])
   }
 
   saveUnlocked() {
-    try {
-      uni.setStorageSync('td_achievements', JSON.stringify(this.unlocked))
-    } catch (e) {
-      console.error('Save achievements failed:', e)
-    }
+    storageManager.saveData('achievements', this.unlocked)
   }
 
   /**

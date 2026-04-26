@@ -10,6 +10,9 @@ export class DifficultySystem {
     this.minDifficulty = 1
     this.maxDifficulty = 3
 
+    // 关卡数学题难度范围约束
+    this.mathDiffRange = null
+
     // 答题历史（滑动窗口）
     this.history = []
     this.windowSize = 10
@@ -71,13 +74,25 @@ export class DifficultySystem {
   /**
    * 获取题目难度（整数 1-3）
    */
+  /**
+   * 设置关卡数学题难度范围
+   */
+  setMathDiffRange(range) {
+    this.mathDiffRange = range
+  }
+
   getQuestionDifficulty() {
     // 添加随机性，偶尔出简单题保持信心
-    const baseLevel = Math.round(this.currentDifficulty)
+    let baseLevel = Math.round(this.currentDifficulty)
 
     if (Math.random() < 0.2) {
       // 20% 概率降一级难度（给孩子喘息空间）
-      return Math.max(1, baseLevel - 1)
+      baseLevel = Math.max(1, baseLevel - 1)
+    }
+
+    // 受关卡数学题范围约束
+    if (this.mathDiffRange) {
+      baseLevel = Math.max(this.mathDiffRange[0], Math.min(this.mathDiffRange[1], baseLevel))
     }
 
     return baseLevel
@@ -105,6 +120,7 @@ export class DifficultySystem {
   reset() {
     this.currentDifficulty = 1.0
     this.history = []
+    this.mathDiffRange = null
   }
 }
 

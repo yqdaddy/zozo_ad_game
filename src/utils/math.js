@@ -1,6 +1,7 @@
 /**
- * 数学题库 - 五年级上册
- * 知识点：小数乘法、小数除法、简易方程、多边形面积
+ * 数学题库 - 五年级上册 + 初一
+ * 五年级：小数乘法、小数除法、简易方程、多边形面积
+ * 初一：有理数运算、整式运算、一元一次方程、几何初步
  */
 
 // 难度级别
@@ -15,7 +16,12 @@ export const TYPES = {
   DECIMAL_MULTIPLY: '小数乘法',
   DECIMAL_DIVIDE: '小数除法',
   EQUATION: '简易方程',
-  AREA: '多边形面积'
+  AREA: '多边形面积',
+  // 初一内容
+  RATIONAL_NUMBER: '有理数运算',
+  ALGEBRAIC: '整式运算',
+  LINEAR_EQUATION: '一元一次方程',
+  GEOMETRY: '几何初步'
 }
 
 /**
@@ -241,15 +247,235 @@ function getAreaHint(shape) {
   return hints[shape] || ''
 }
 
+// ===================== 初一数学 =====================
+
 /**
- * 随机生成题目
+ * 生成有理数运算题目（含负数）
+ */
+export function generateRationalNumber(difficulty) {
+  let a, b, question, answer, op
+
+  switch (difficulty) {
+    case DIFFICULTY.EASY:
+      // 简单的正负数加减
+      a = randomInt(-20, 20)
+      b = randomInt(-20, 20)
+      if (Math.random() > 0.5) {
+        op = '+'
+        answer = a + b
+        question = b >= 0 ? `(${a}) + ${b} = ?` : `(${a}) + (${b}) = ?`
+      } else {
+        op = '-'
+        answer = a - b
+        question = b >= 0 ? `(${a}) - ${b} = ?` : `(${a}) - (${b}) = ?`
+      }
+      break
+    case DIFFICULTY.MEDIUM:
+      // 负数乘除
+      a = randomInt(-12, 12)
+      b = randomInt(-12, 12)
+      if (b === 0) b = randomInt(1, 10)
+      if (Math.random() > 0.5) {
+        op = '×'
+        answer = a * b
+        question = `(${a}) × (${b}) = ?`
+      } else {
+        // 确保整除
+        answer = randomInt(-10, 10)
+        a = answer * b
+        op = '÷'
+        question = `(${a}) ÷ (${b}) = ?`
+      }
+      break
+    case DIFFICULTY.HARD:
+      // 混合运算
+      a = randomInt(-10, 10)
+      b = randomInt(-10, 10)
+      const c = randomInt(1, 5)
+      if (Math.random() > 0.5) {
+        answer = a + b * c
+        question = `(${a}) + (${b}) × ${c} = ?`
+      } else {
+        answer = a * b - c
+        question = `(${a}) × (${b}) - ${c} = ?`
+      }
+      break
+  }
+
+  return {
+    type: TYPES.RATIONAL_NUMBER,
+    question: question,
+    answer: answer,
+    hint: '提示：负负得正，异号相加取绝对值大的符号',
+    difficulty: difficulty
+  }
+}
+
+/**
+ * 生成整式运算题目
+ */
+export function generateAlgebraic(difficulty) {
+  let question, answer
+
+  switch (difficulty) {
+    case DIFFICULTY.EASY:
+      // 合并同类项
+      const a1 = randomInt(2, 10)
+      const a2 = randomInt(1, 8)
+      answer = a1 + a2
+      question = `${a1}x + ${a2}x = ?x`
+      break
+    case DIFFICULTY.MEDIUM:
+      // 去括号合并
+      const b1 = randomInt(2, 8)
+      const b2 = randomInt(1, 6)
+      const b3 = randomInt(1, 5)
+      if (Math.random() > 0.5) {
+        answer = b1 + b2 - b3
+        question = `${b1}a + (${b2}a - ${b3}a) = ?a`
+      } else {
+        answer = b1 - b2 + b3
+        question = `${b1}a - (${b2}a - ${b3}a) = ?a`
+      }
+      break
+    case DIFFICULTY.HARD:
+      // 多项式运算
+      const c1 = randomInt(2, 6)
+      const c2 = randomInt(1, 5)
+      const c3 = randomInt(1, 4)
+      const c4 = randomInt(1, 4)
+      answer = c1 * c2 + c3 * c4
+      question = `${c1} × ${c2}m + ${c3} × ${c4}m = ?m`
+      break
+  }
+
+  return {
+    type: TYPES.ALGEBRAIC,
+    question: question,
+    answer: answer,
+    hint: '提示：合并同类项，系数相加减',
+    difficulty: difficulty
+  }
+}
+
+/**
+ * 生成一元一次方程题目（初一难度）
+ */
+export function generateLinearEquation(difficulty) {
+  let x, question, answer
+
+  switch (difficulty) {
+    case DIFFICULTY.EASY:
+      // 2x + 3 = 11 类型
+      x = randomInt(2, 15)
+      const a1 = randomInt(2, 6)
+      const b1 = randomInt(1, 10)
+      const c1 = a1 * x + b1
+      question = `${a1}x + ${b1} = ${c1}，求 x = ?`
+      answer = x
+      break
+    case DIFFICULTY.MEDIUM:
+      // 3x - 5 = 2x + 7 类型
+      x = randomInt(3, 20)
+      const a2 = randomInt(3, 8)
+      const b2 = randomInt(1, 10)
+      const a3 = randomInt(1, a2 - 1)
+      const c2 = (a2 - a3) * x + b2
+      question = `${a2}x - ${b2} = ${a3}x + ${c2 - b2}，求 x = ?`
+      answer = x
+      break
+    case DIFFICULTY.HARD:
+      // 带分数或括号：2(x+3) = 5x - 6
+      x = randomInt(2, 12)
+      const k = randomInt(2, 4)
+      const m = randomInt(1, 5)
+      const n = randomInt(2, 5)
+      // k(x + m) = nx + result => kx + km = nx + result
+      // (k-n)x = result - km => result = (k-n)x + km
+      if (k > n) {
+        const result = (k - n) * x + k * m
+        question = `${k}(x + ${m}) = ${n}x + ${result}，求 x = ?`
+      } else {
+        const result = k * m - (n - k) * x
+        question = `${k}(x + ${m}) = ${n}x + ${result}，求 x = ?`
+      }
+      answer = x
+      break
+  }
+
+  return {
+    type: TYPES.LINEAR_EQUATION,
+    question: question,
+    answer: answer,
+    hint: '提示：移项变号，合并同类项，系数化为1',
+    difficulty: difficulty
+  }
+}
+
+/**
+ * 生成几何初步题目（角度、线段）
+ */
+export function generateGeometry(difficulty) {
+  let question, answer
+
+  switch (difficulty) {
+    case DIFFICULTY.EASY:
+      // 补角或余角
+      if (Math.random() > 0.5) {
+        const angle = randomInt(30, 150)
+        answer = 180 - angle
+        question = `一个角是${angle}°，它的补角是多少度？`
+      } else {
+        const angle = randomInt(10, 80)
+        answer = 90 - angle
+        question = `一个角是${angle}°，它的余角是多少度？`
+      }
+      break
+    case DIFFICULTY.MEDIUM:
+      // 对顶角、邻补角
+      if (Math.random() > 0.5) {
+        const angle = randomInt(20, 160)
+        answer = angle
+        question = `两条直线相交，一个角是${angle}°，它的对顶角是多少度？`
+      } else {
+        const angle = randomInt(30, 150)
+        answer = 180 - angle
+        question = `两条直线相交，一个角是${angle}°，它的邻补角是多少度？`
+      }
+      break
+    case DIFFICULTY.HARD:
+      // 三角形内角和
+      const angle1 = randomInt(30, 80)
+      const angle2 = randomInt(30, 100 - angle1)
+      answer = 180 - angle1 - angle2
+      question = `三角形的两个角分别是${angle1}°和${angle2}°，第三个角是多少度？`
+      break
+  }
+
+  return {
+    type: TYPES.GEOMETRY,
+    question: question,
+    answer: answer,
+    hint: '提示：补角和为180°，余角和为90°，三角形内角和180°',
+    difficulty: difficulty
+  }
+}
+
+/**
+ * 随机生成题目（包含初一内容）
  */
 export function generateRandomQuestion(difficulty) {
   const generators = [
+    // 五年级
     generateDecimalMultiply,
     generateDecimalDivide,
     generateEquation,
-    generateArea
+    generateArea,
+    // 初一
+    generateRationalNumber,
+    generateAlgebraic,
+    generateLinearEquation,
+    generateGeometry
   ]
   const randomGenerator = generators[Math.floor(Math.random() * generators.length)]
   return randomGenerator(difficulty)

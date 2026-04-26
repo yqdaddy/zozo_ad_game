@@ -23,6 +23,10 @@ export class Tower extends Entity {
     // 基础配置
     this.baseConfig = { ...config }
 
+    // 生命值
+    this.health = config.health || 100
+    this.maxHealth = config.health || 100
+
     // 战斗属性
     this.damage = config.damage
     this.range = config.range
@@ -34,6 +38,14 @@ export class Tower extends Entity {
     this.splash = config.splash || 0
     this.slowEffect = config.slowEffect || 0
     this.slowDuration = config.slowDuration || 0
+
+    // 金币矿场属性
+    this.isGoldMine = config.isGoldMine || false
+    if (this.isGoldMine) {
+      this.goldPerCycle = config.goldPerCycle || 12
+      this.productionInterval = config.productionInterval || 10000
+      this.productionTimer = 0
+    }
 
     // 视觉属性
     this.emoji = config.emoji
@@ -47,6 +59,19 @@ export class Tower extends Entity {
    * 更新
    */
   update(dt) {
+    // 金币矿场：产金逻辑
+    if (this.isGoldMine) {
+      this.productionTimer += dt * this.game.state.gameSpeed
+      if (this.productionTimer >= this.productionInterval) {
+        this.productionTimer -= this.productionInterval
+        const amount = Math.floor(this.goldPerCycle * (1 + (this.level - 1) * 0.5))
+        this.game.addGold(amount)
+        this.game.createGoldEffect(this.x, this.y)
+        this.game.events.emit('goldProduced', { amount })
+      }
+      return
+    }
+
     // 寻找目标
     this.findTarget()
 
@@ -120,7 +145,22 @@ export class Tower extends Entity {
    * 获取升级费用
    */
   getUpgradeCost() {
+    if (this.isGoldMine) {
+      return Math.floor(this.baseConfig.cost * this.level * 1.0)
+    }
     return getUpgradeCost(this.baseConfig.cost, this.level)
+  }
+
+  /**
+   * 受到伤害
+   */
+  takeDamage(damage) {
+    this.health -= damage
+    if (this.health <= 0) {
+      this.health = 0
+      this.isDead = true
+      this.game.events.emit('towerDestroyed', this)
+    }
   }
 
   /**
@@ -164,11 +204,39 @@ export class Tower extends Entity {
     ctx.textBaseline = 'middle'
     ctx.fillText(this.emoji, this.x, this.y)
 
+    // 金币矿场进度环
+    if (this.isGoldMine) {
+      const progress = this.productionTimer / this.productionInterval
+      ctx.strokeStyle = '#FFD700'
+      ctx.lineWidth = 3
+      ctx.beginPath()
+      ctx.arc(this.x, this.y, size / 2 + 3, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2)
+      ctx.stroke()
+      ctx.lineWidth = 1
+    }
+
     // 等级标识
     if (this.level > 1) {
       ctx.fillStyle = '#FFD700'
       ctx.font = 'bold 10px Arial'
       ctx.fillText(`Lv${this.level}`, this.x, this.y - size / 2 - 6)
+    }
+
+    // 血条（只在受伤时显示）
+    if (this.health < this.maxHealth) {
+      const hpWidth = size * 0.8
+      const hpHeight = 4
+      const hpX = this.x - hpWidth / 2
+      const hpY = this.y + size / 2 + 4
+
+      // 血条背景
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
+      ctx.fillRect(hpX, hpY, hpWidth, hpHeight)
+
+      // 当前血量
+      const hpRatio = this.health / this.maxHealth
+      ctx.fillStyle = hpRatio > 0.5 ? '#4CAF50' : hpRatio > 0.25 ? '#FF9800' : '#F44336'
+      ctx.fillRect(hpX, hpY, hpWidth * hpRatio, hpHeight)
     }
   }
 }

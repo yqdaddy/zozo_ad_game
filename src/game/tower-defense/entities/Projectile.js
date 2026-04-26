@@ -91,10 +91,12 @@ export class Projectile extends Entity {
    */
   render(ctx) {
     // 子弹拖尾
-    ctx.fillStyle = this.color + '66'
+    ctx.globalAlpha = 0.4
+    ctx.fillStyle = this.color
     ctx.beginPath()
     ctx.arc(this.x, this.y, this.size + 2, 0, Math.PI * 2)
     ctx.fill()
+    ctx.globalAlpha = 1
 
     // 子弹本体
     ctx.fillStyle = this.color

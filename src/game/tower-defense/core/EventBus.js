@@ -1,5 +1,5 @@
 /**
- * 事件总线 - 用于游戏模块间通信
+ * 事件总线 - 用于工具模块间通信
  */
 export class EventBus {
   constructor() {

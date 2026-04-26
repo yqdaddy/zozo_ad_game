@@ -6,6 +6,7 @@ export const TOWER_CONFIGS = {
     name: '弓箭塔',
     emoji: '🏹',
     cost: 50,
+    health: 100,
     damage: 15,
     range: 80,
     fireRate: 600,
@@ -18,6 +19,7 @@ export const TOWER_CONFIGS = {
     name: '魔法塔',
     emoji: '✨',
     cost: 80,
+    health: 80,
     damage: 20,
     range: 70,
     fireRate: 1000,
@@ -31,6 +33,7 @@ export const TOWER_CONFIGS = {
     name: '炮塔',
     emoji: '💣',
     cost: 100,
+    health: 150,
     damage: 40,
     range: 75,
     fireRate: 1500,
@@ -43,6 +46,7 @@ export const TOWER_CONFIGS = {
     name: '冰冻塔',
     emoji: '❄️',
     cost: 70,
+    health: 80,
     damage: 8,
     range: 70,
     fireRate: 800,
@@ -52,6 +56,22 @@ export const TOWER_CONFIGS = {
     slowEffect: 0.5,
     slowDuration: 2000,
     description: '减速敌人'
+  },
+  goldMine: {
+    name: '金币矿场',
+    emoji: '⛏️',
+    cost: 120,
+    health: 80,
+    damage: 0,
+    range: 0,
+    fireRate: 0,
+    projectileSpeed: 0,
+    color: '#FFD700',
+    projectileColor: '#FFD700',
+    description: '每10秒生产金币',
+    isGoldMine: true,
+    goldPerCycle: 12,
+    productionInterval: 10000
   }
 }
 

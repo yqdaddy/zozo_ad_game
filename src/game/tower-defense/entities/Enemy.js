@@ -5,11 +5,11 @@ import { Entity } from './Entity.js'
 import { ENEMY_CONFIGS, getEnemyStats } from '../config/enemies.js'
 
 export class Enemy extends Entity {
-  constructor(game, type, path, wave) {
+  constructor(game, type, path, wave, levelMul = {}) {
     const startPos = path[0]
     super(game, startPos.x, startPos.y)
 
-    const stats = getEnemyStats(type, wave)
+    const stats = getEnemyStats(type, wave, levelMul)
 
     this.type = type
     this.path = path
@@ -26,6 +26,9 @@ export class Enemy extends Entity {
 
     // 奖励
     this.gold = stats.gold
+
+    // 攻击力
+    this.attack = stats.attack || 1
 
     // 视觉
     this.emoji = stats.emoji
@@ -118,12 +121,14 @@ export class Enemy extends Entity {
    */
   reachEnd() {
     this.isDead = true
-    this.game.state.lives--
+    // 根据攻击力扣减生命值
+    this.game.state.lives -= this.attack
 
     // 触发事件
     this.game.events.emit('enemyReachedEnd', this)
 
     if (this.game.state.lives <= 0) {
+      this.game.state.lives = 0
       this.game.gameOver(false)
     }
   }

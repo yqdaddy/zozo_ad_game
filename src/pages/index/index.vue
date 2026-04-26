@@ -1,12 +1,12 @@
 <template>
   <view class="container">
     <!-- 顶部标题 -->
-    <view class="header">
-      <text class="title">🎮 数学游戏集合</text>
+    <view class="header" :style="{ paddingTop: navPaddingTop + 'px' }">
+      <text class="title">🎮 数学工具集合</text>
       <text class="subtitle">边玩边学，快乐成长</text>
     </view>
 
-    <!-- 游戏列表 -->
+    <!-- 工具列表 -->
     <view class="game-list">
       <view
         v-for="game in games"
@@ -36,7 +36,7 @@
 
     <!-- 底部信息 -->
     <view class="footer">
-      <text class="footer-text">适合小学生的数学学习游戏</text>
+      <text class="footer-text">适合小学生的数学学习工具</text>
       <text class="version">v1.0.0</text>
       <!-- #ifdef H5 -->
       <navigator url="" open-type="navigate" class="icp-link" @click.prevent="openICP">
@@ -48,16 +48,19 @@
 </template>
 
 <script>
+import { soundManager } from '@/utils/sound-manager'
+
 export default {
   data() {
     return {
+      navPaddingTop: 0,
       games: [
         {
           id: 'tower-defense',
           icon: '🏰',
           title: '数学塔防',
-          description: '用数学知识守护基地，答题建塔消灭敌人！',
-          tags: ['五年级', '小数运算', '方程', '面积'],
+          description: '用数学知识守护基地，答题建塔！',
+          tags: ['五年级', '初一', '有理数', '方程'],
           path: '/pages/tower-defense/index',
           comingSoon: false
         },
@@ -91,6 +94,12 @@ export default {
       ]
     }
   },
+  onLoad() {
+    // #ifdef MP-WEIXIN
+    const menuBtn = wx.getMenuButtonBoundingClientRect()
+    this.navPaddingTop = menuBtn.top + menuBtn.height + 8
+    // #endif
+  },
   methods: {
     openICP() {
       // #ifdef H5
@@ -98,6 +107,8 @@ export default {
       // #endif
     },
     openGame(game) {
+      soundManager.init()
+      soundManager.click()
       if (game.comingSoon) {
         uni.showToast({
           title: '敬请期待',
@@ -109,7 +120,21 @@ export default {
         url: game.path
       })
     }
+  },
+
+  // #ifdef MP-WEIXIN
+  onShareAppMessage() {
+    return {
+      title: '数学工具集合 - 边玩边学，快乐成长！',
+      path: '/pages/index/index'
+    }
+  },
+  onShareTimeline() {
+    return {
+      title: '数学工具集合 - 边玩边学，快乐成长！'
+    }
   }
+  // #endif
 }
 </script>
 

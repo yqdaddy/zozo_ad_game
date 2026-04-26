@@ -1,12 +1,12 @@
 {
-  "name": "数学游戏集合",
+  "name": "数学工具集合",
   "appid": "__UNI__MATHGAMES",
-  "description": "有趣的数学游戏，边玩边学！",
+  "description": "有趣的数学工具，边玩边学！",
   "versionName": "1.0.0",
   "versionCode": "100",
   "transformPx": false,
   "h5": {
-    "title": "数学游戏集合",
+    "title": "数学工具集合",
     "router": {
       "mode": "hash",
       "base": "/"
@@ -17,7 +17,7 @@
     "sdkConfigs": {}
   },
   "mp-weixin": {
-    "appid": "",
+    "appid": "wxa65aae633501c125",
     "setting": {
       "urlCheck": false,
       "es6": true,

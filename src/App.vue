@@ -1,7 +1,7 @@
 <script>
 export default {
   onLaunch() {
-    console.log('数学游戏集合启动')
+    console.log('数学工具集合启动')
   },
   onShow() {
     console.log('App Show')
